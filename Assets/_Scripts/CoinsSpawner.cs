@@ -1,6 +1,4 @@
 using System.Collections;
-using System;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class CoinsSpawner : MonoBehaviour
@@ -11,18 +9,25 @@ public class CoinsSpawner : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        StartCoinSpawn();
+    }
+    public void StartCoinSpawn(){
         StartCoroutine(CoinSpawner());
     }
 
+    public void StopCoinSpawn(){
+        StopCoroutine(CoinSpawner());
+    }
+
     void CoinSpawn(){
-        float rand = UnityEngine.Random.Range(-1.8f, 1.8f);
-        Instantiate(coinPrefab, new Vector3(rand, transform.position.y, transform.position.z),Quaternion.identity);
+        int randPos = Random.Range(1,5);
+        float carPos = FindAnyObjectByType<CarSpawner>().SpawningPos(randPos);
+        Instantiate(coinPrefab, new Vector3(carPos, transform.position.y, transform.position.z), Quaternion.Euler(0, 0, 0));
     }
 
     IEnumerator CoinSpawner(){
         while(true){
-            int interval = UnityEngine.Random.Range(10,20);
-            yield return new WaitForSeconds(interval);
+            yield return new WaitForSeconds(1f*Eternals.coinGapMultiplier);
             CoinSpawn();
         }
     }

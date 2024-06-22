@@ -12,13 +12,13 @@ public class CarMovement : MonoBehaviour
     public float speed;
     
     private void Start() {
-        speed = Random.Range(0.7f, 1f) * Eternals.speedBoostValue;
+        speed = Random.Range(0.7f, 1f);
         originalScale = transform.localScale;
         // StartCoroutine(CheckCarCollision());
     }
 
     private void Update() {
-        transform.position -= new Vector3(0, speed*Time.deltaTime);
+        transform.position -= new Vector3(0, speed*Time.deltaTime*Eternals.speedBoostValue);
         float scaleX = Mathf.PerlinNoise(Time.time * shakeSpeed, 0f) * 2f - 1f;
         float scaleY = Mathf.PerlinNoise(0f, Time.time * shakeSpeed) * 2f - 1f;
         Vector3 shakeScale = new Vector3(scaleX, scaleY, 0) * shakeIntensity;

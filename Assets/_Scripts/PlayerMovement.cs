@@ -5,24 +5,23 @@ using UnityEngine;
 
 public class PlayerMovement : MonoBehaviour
 {
-
-    public ScoreManager scoreManagerScript;
+    public CarSpawner carSpawnerScript;
+    public CoinsSpawner coinsSpawnerScript;
     public float speed = 5f, rotationSpeed = 4f;
-    public GameObject gameOverPanel;
-    bool isMovingLeft = false, isMovingRight = false;
+    public GameObject explosionPrefab;
+    public Sprite bujji, burnCar;
 
     public float shakeIntensity = 0.005f;
     public float shakeSpeed = 1f;
 
     private Vector3 originalScale;
+    float prevSpeedBoost, speedShowValue;
 
     // Start is called before the first frame update
     void Start()
     {
         originalScale = transform.localScale;
-
-        gameOverPanel.SetActive(false);
-        Time.timeScale = 1;
+        StartCoroutine(UpdatePlayerSpeed());
     }
 
     // Update is called once per frame
@@ -31,7 +30,9 @@ public class PlayerMovement : MonoBehaviour
         PlayerShake();
         if(Input.GetKey(KeyCode.LeftArrow)){MoveLeft();}
         if(Input.GetKey(KeyCode.RightArrow)){MoveRight();}
-        if(Input.GetKeyDown(KeyCode.Space)){Time.timeScale = 1f;}
+        if(Input.GetKey(KeyCode.UpArrow)){MoveUp();}
+        if(Input.GetKey(KeyCode.DownArrow)){MoveDown();}
+        if(Input.GetKeyDown(KeyCode.Space)){Retry();}
         MovementRotation();
         Clamp();
         
@@ -61,26 +62,64 @@ public class PlayerMovement : MonoBehaviour
         transform.rotation = Quaternion.Lerp(transform.rotation, Quaternion.Euler(0, 0, -43), rotationSpeed * Time.deltaTime);
     }
 
-    public void MovingLeft(bool pLeft){isMovingLeft = pLeft;}
-    public void MOvingRight(bool pRight){isMovingRight = pRight;}
+    void MoveUp(){
+        transform.position += new Vector3(0, speed*Time.deltaTime, 0);
+    }
 
-    void Clamp(){
+    void MoveDown(){
+        transform.position -= new Vector3(0, speed * Time.deltaTime, 0);
+    }
+
+        void Clamp(){
         Vector3 pos = transform.position;
         pos.x = Mathf.Clamp(pos.x,-1.3f, 1.3f);
+        pos.y = Mathf.Clamp(pos.y, -4f, 4f);
         transform.position = pos;
     }
 
     private void OnTriggerEnter2D(Collider2D other) {
-
-        Debug.Log("Collision Occured");
-        if(other.gameObject.tag == "car" && Eternals.isShieldOn == false){
-            Time.timeScale = 0;
-            gameOverPanel.SetActive(true);
+        // Debug.Log("Collision Occured " + Eternals.isShieldOn);
+        if(other.gameObject.tag == "car" && Eternals.isShieldOn == true){
+            Instantiate(explosionPrefab, other.transform.position, Quaternion.identity);
+            other.gameObject.SetActive(false);
+        }
+        else if(other.gameObject.tag == "car"){
+            prevSpeedBoost = Eternals.speedBoostValue;
+            Instantiate(explosionPrefab, transform.position, Quaternion.identity);
+            GetComponent<SpriteRenderer>().sprite = burnCar;
+            Eternals.speedBoostValue = 0f;
+            FlowManager.Instance.AfterExplosion();
+            carSpawnerScript.StopSpawning();
+            coinsSpawnerScript.StopCoinSpawn();
+            Eternals.isCarBroke = true;
         }
 
-        if(other.gameObject.tag == "Coin"){
-            scoreManagerScript.score += 10;
-            Destroy(other.gameObject);
+        string oName = other.gameObject.name;
+        if(oName.Contains("coin")){Eternals.coins += 1;}
+        if(oName.Contains("shield")){Eternals.shields += 1;}
+        if(oName.Contains("fuel")){Eternals.fuels += 1;}
+        if(oName.Contains("sprint")){Eternals.sprints += 1;}
+        if(oName.Contains("magnet")){Eternals.magnets += 1;}
+        FlowManager.Instance.SavePlayerPrefs();
+        Destroy(other.gameObject);
+    }
+
+    void Retry(){
+        GetComponent<SpriteRenderer>().sprite = bujji;
+        Eternals.speedBoostValue = prevSpeedBoost;
+        carSpawnerScript.StartSpawning();
+        coinsSpawnerScript.StartCoinSpawn();
+        FlowManager.Instance.UpdateSmokeLifetime(1f);
+    }
+
+    IEnumerator UpdatePlayerSpeed(){
+        while(true){
+            float carSpeed = Eternals.minSpeed - 50f + transform.position.y+Eternals.sprintSpeed;
+            float fillValue = carSpeed/(Eternals.minSpeed + 50f);
+            FlowManager.Instance.speedometer.fillAmount = fillValue;
+            FlowManager.Instance.speedometerText.text = carSpeed.ToString("F0");
+            // Debug.Log("speed is showing now " + carSpeed + " and " + fillValue);
+            yield return new WaitForSeconds(0.05f);
         }
     }
 
